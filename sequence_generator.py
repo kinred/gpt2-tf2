@@ -16,11 +16,11 @@ def seq_gen(model_path, model_param, vocab, seq_len, temperature, top_k, top_p, 
     sg = SequenceGenerator(model_path, model_param, vocab)
     sg.load_weights()
     generated_seq = sg.sample_sequence(context,
-                                     seq_len=512,
-                                     temperature=1,
-                                     top_k=8,
-                                     top_p=0.9,
-                                     nucleus_sampling=True)
+                                     seq_len=seq_len,
+                                     temperature=temperature,
+                                     top_k=top_k,
+                                     top_p=top_p,
+                                     nucleus_sampling=nucleus_sampling)
 
     print(generated_seq)
 
