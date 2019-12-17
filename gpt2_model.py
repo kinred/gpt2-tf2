@@ -6,6 +6,8 @@ from tensorflow.python.framework import tensor_shape
 
 from utils.tf_utils import *
 import os
+import time
+import json
 
 _ROOT = os.path.abspath(os.path.dirname(__file__))
 LOG_DIR = _ROOT + "/log"
@@ -19,7 +21,7 @@ train_step_signature = [
 
 class Gpt2(tf.keras.Model):
     def __init__(self, num_layers, d_model, num_heads, dff, max_seq_len, vocab_size,
-                 optimizer="adam", learning_rate=1e-3, rev_embedding_projection=True):
+                 optimizer="adam", rev_embedding_projection=True):
         super(Gpt2, self).__init__()
 
         self.rev_embedding_projection = rev_embedding_projection
@@ -29,7 +31,7 @@ class Gpt2(tf.keras.Model):
         self.max_seq_len = max_seq_len
         self.vocab_size = vocab_size
         self.d_model = d_model
-        self.learning_rate = learning_rate
+        self.learning_rate = 1e-3
         self.optimizer_t = optimizer
         self.dataset = None
         self.mirrored_strategy = None
@@ -56,18 +58,56 @@ class Gpt2(tf.keras.Model):
         self.train_step_signature = [
             tf.TensorSpec(shape=(None, None), dtype=tf.int32)]
 
-    def call(self, x, training=True, past=None):
+    @staticmethod
+    def create_from_params(model_path):
+        model_param = model_path + "/model_params.json"
+        with open(model_param) as f:
+            params = json.load(f)
+
+        model = Gpt2(params['num_layers'],
+                     params['d_model'],
+                     params['num_heads'],
+                     params['dff'],
+                     params['max_seq_len'],
+                     params['vocab_size'],
+                     optimizer=params['optimizer'])
+        return model
+
+    def save_params(self, model_path):
+        params = {}
+        params['num_layers'] = self.num_layers
+        params['d_model'] = self.d_model
+        params['num_heads']= self.num_heads
+        params['dff'] = self.dff
+        params['max_seq_len'] = self.max_seq_len
+        params['vocab_size'] = self.vocab_size
+        params['optimizer'] =self.optimizer_t
+
+        model_param = model_path + "/model_params.json"
+        with open(model_param, "w") as f:
+            json.dump(params, f, indent=4)
+
+    def print_params(self):
+        print("num_layer: " + str(self.num_layers))
+        print("num_heads: " + str(self.num_heads))
+        print("d_model: " + str(self.d_model))
+        print("dff: " + str(self.dff))
+        print("max_seq_len: " + str(self.max_seq_len))
+        print("vocab_size: " + str(self.vocab_size))
+        print("optimizer: " + str(self.optimizer_t))
+
+    def call(self, x, training=True, pasts=None):
         x = tf.cast(x, tf.int32)
         batch, sequence = tf.shape(x)[0], tf.shape(x)[1]
-        if past is None:
+        past_length = 1
+        if pasts is None:
             pasts = [None] * self.num_layers
         else:
-            pasts = tf.unstack(past, axis=1)
+            past_length = tf.shape(pasts)[-2]            
 
         assert len(pasts) == self.num_layers
 
         att_mask = create_masks(x)
-        past_length = 1 if past is None else tf.shape(past)[-2]
         with tf.name_scope("embeddings"):
             embedded_x = self.embedding(x)
             hidden_states = embedded_x + self.pos_embedding(x, start=past_length)
@@ -100,8 +140,9 @@ class Gpt2(tf.keras.Model):
             accuracy = tf.reduce_sum(tf.cast(acc * weights, tf.float32)) / nonpad_seq
             return tf.cast(accuracy, tf.float32)
 
-    def creat_optimizer(self):
+    def create_optimizer(self, learning_rate=1e-3, mixed_precission=False):
         optimizer = self.optimizer_t.lower()
+        self.learning_rate=learning_rate
         with tf.name_scope("optimizer"):
             if optimizer == "adam":
                 self.optimizer = tf.keras.optimizers.Adam(self.learning_rate, beta_1=0.9, beta_2=0.98,
@@ -112,7 +153,12 @@ class Gpt2(tf.keras.Model):
                 self.optimizer = tf.keras.optimizers.RMSprop(self.learning_rate)
             else:
                 self.optimizer = tf.keras.optimizers.SGD(self.learning_rate)
-            return self.optimizer
+    
+        if mixed_precission:
+            # Enable mixed precision training
+            self.optimizer = tf.train.experimental.enable_mixed_precision_graph_rewrite(self.optimizer)
+
+        return self.optimizer
 
     def get_loss(self, real, pred):
         with tf.name_scope("loss_layer"):
@@ -205,11 +251,16 @@ class Gpt2(tf.keras.Model):
     def fit(self, train_dataset):
         if self.mirrored_strategy is None:
             tf.summary.trace_on(graph=True, profiler=True)
+            start_time = time.perf_counter()
             for (step, (inputs, targets)) in enumerate(train_dataset):
                 train_loss, train_acc = self.train_step(inputs, targets, step)
                 if step % 10 == 0:
-                    print('Step {} Train_Loss {:.4f} Train_Accuracy {:.4f}'.format(
-                        step, train_loss, train_acc))
+                    stop_time = time.perf_counter()
+                    batch_size = inputs.get_shape()[0]
+                    it_secs = (batch_size * 10) / (stop_time - start_time)
+                    start_time = stop_time
+                    print('Step {} Train_Loss {:.4f} Train_Accuracy {:.4f} It/sec {:.4f}'.format(
+                        step, train_loss, train_acc, it_secs))
 
                 if step == 0:
                     with self.train_writer.as_default():

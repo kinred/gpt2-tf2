@@ -7,46 +7,41 @@ import os
 
 _ROOT = os.path.abspath(os.path.dirname(__file__))
 LOG_DIR = _ROOT + "/log"
-MODEL_DIR = _ROOT + "/model"
 
 
 @click.command()
-@click.option('--num-layers', type=int, default=8, show_default=True, help="No. of decoder layers")
-@click.option('--embedding-size', type=int, default=768, show_default=True, help="Embedding size")
-@click.option('--num-heads', type=int, default=8, show_default=True, help="Number of heads")
-@click.option('--dff', type=int, default=3072, show_default=True, help="Filter Size")
-@click.option('--max-seq-len', type=int, default=515, show_default=True, help="Seq length")
-@click.option('--vocab-size', type=int, default=32000, show_default=True, help="Vocab size")
-@click.option('--optimizer', type=str, default="adam", show_default=True, help="optimizer type")
-@click.option('--batch-size', type=int, default=8, show_default=True, help="optimizer type")
+@click.option('--model-dir', type=str, default="./model", show_default=True, help="Directory to load model")
+@click.option('--data-dir', type=str, default="./data", show_default=True, help="training data directory")
+@click.option('--batch-size', type=int, default=16, show_default=True, help="batch size")
 @click.option('--learning-rate', type=float, default=0.001, show_default=True, help="learning rate")
 @click.option('--distributed', type=bool, default=False, show_default=True, help="distributed training")
-def train(num_layers, embedding_size, num_heads, dff, max_seq_len, vocab_size,
-          optimizer="adam", batch_size=16, learning_rate=1e-3, distributed=False):
-    tf_records = glob.glob((_ROOT + "/data/tf_records/*.tfrecord"))
+@click.option('--mxp', type=bool, default=False, show_default=True, help="enable mixed precission training")
+def train(model_dir, data_dir, batch_size=16, learning_rate=0.001, distributed=False, mxp=False):
+    data_dir = os.path.abspath(data_dir)
+    model_dir = os.path.abspath(model_dir)
+    tf_records = glob.glob(data_dir + "/tf_records/*.tfrecord")
+    dataset = None
     if distributed:
-        dist_dataset = input_fn(tf_records, batch_size=batch_size)
+        dataset = input_fn(tf_records, batch_size=batch_size)
         mirrored_strategy = tf.distribute.MirroredStrategy(devices=["/gpu:0", "/gpu:1"])
-        dist_dataset = mirrored_strategy.experimental_distribute_dataset(dist_dataset)
+        dataset = mirrored_strategy.experimental_distribute_dataset(dataset)
         with mirrored_strategy.scope():
-
-            model = Gpt2(num_layers, embedding_size, num_heads, dff, max_seq_len, vocab_size,
-                         optimizer=optimizer, learning_rate=learning_rate)
-            model.creat_optimizer()
-            model.create_checkpoint_manager(MODEL_DIR)
+            model = Gpt2.create_from_params(model_dir)
+            model.creat_optimizer(learning_rate=learning_rate, mixed_precission=mxp)
+            model.create_checkpoint_manager(model_dir)
             model.create_summary_writer(LOG_DIR)
 
         model.mirrored_strategy = mirrored_strategy
-        model.fit(dist_dataset)
     else:
         dataset = input_fn(tf_records, batch_size=batch_size)
-        model = Gpt2(num_layers, embedding_size, num_heads, dff, max_seq_len, vocab_size,
-                     optimizer=optimizer, learning_rate=learning_rate)
-        model.creat_optimizer()
-        model.create_checkpoint_manager(MODEL_DIR)
+        model = Gpt2.create_from_params(model_dir)
+        model.create_optimizer(learning_rate=learning_rate, mixed_precission=mxp)
+        model.create_checkpoint_manager(model_dir)
         model.create_summary_writer(LOG_DIR)
-        model.fit(dataset)
-        print("Training Done................")
+    print("Trainign Model...............")
+    model.print_params()
+    model.fit(dataset)
+    print("Training Done................")
 
 
 if __name__ == "__main__":
