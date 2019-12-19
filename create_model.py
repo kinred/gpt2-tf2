@@ -13,8 +13,8 @@ LOG_DIR = _ROOT + "/log"
 @click.option('--num-layers', type=int, default=8, show_default=True, help="No. of decoder layers")
 @click.option('--embedding-size', type=int, default=768, show_default=True, help="Embedding size")
 @click.option('--num-heads', type=int, default=8, show_default=True, help="Number of heads")
-@click.option('--dff', type=int, default=3072, show_default=True, help="Filter Size")
-@click.option('--max-seq-len', type=int, default=515, show_default=True, help="Seq length")
+@click.option('--max-seq-len', type=int, default=1024, show_default=True, help="Seq length")
+@click.option('--dff', type=int, default=3072, show_default=True, help="Conv filter size (experimental)")
 @click.option('--vocab-size', type=int, default=50000, show_default=True, help="Vocab size")
 @click.option('--optimizer', type=str, default="adam", show_default=True, help="optimizer type")
 def create_model(model_dir, num_layers, embedding_size, num_heads, dff, max_seq_len, vocab_size,

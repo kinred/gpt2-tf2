@@ -109,7 +109,7 @@ def create_tf_records(data_dir, min_seq_len, max_seq_len, per_file_limit=50000):
 @click.option('--data-dir', type=str, default="/data", show_default=True, help="directory where training data will be stored")
 @click.option('--vocab-size', type=int, default=50000, show_default=True, help="byte pair vocab size")
 @click.option('--min-seq-len', type=int, default=15, show_default=True, help="minimum sequence length")
-@click.option('--max-seq-len', type=int, default=512, show_default=True, help="minimum sequence length")
+@click.option('--max-seq-len', type=int, default=1024, show_default=True, help="maximum sequence length")
 def pre_process(text_dir, data_dir, vocab_size, min_seq_len, max_seq_len):
     text_dir = os.path.abspath(text_dir)
     data_dir = os.path.abspath(data_dir)
