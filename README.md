@@ -1,10 +1,10 @@
-# GPT-2 Pre-training and text generation, implemented in Tensorflow 2.0
+# GPT-2 Pre-training and text generation, implemented in Tensorflow 2.x
 
 Originally implemented in tensorflow 1.14 by OpenAi :- ["openai/gpt-2"](https://github.com/openai/gpt-2). OpenAi GPT-2 Paper:-["Language Models are Unsupervised Multitask Learners"](https://d4mucfpksywv.cloudfront.net/better-language-models/language-models.pdf)
 
 Forked from Abhay Kumars implementation: https://github.com/akanyaani/gpt-2-tensorflow2.0
 
-**This is OpenAi GPT-2 implementation in Tensorflow 2.0. It includes the complete processing chain:**
+**This is OpenAi GPT-2 implementation in Tensorflow 2. It includes the complete processing chain:**
 *  **Vocab generation + preprocessing raw text data in any language**
 *  **Creating GPT2 models with different parametrization**
 *  **Multi GPU training GPT2 model**
