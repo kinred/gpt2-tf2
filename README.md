@@ -21,7 +21,7 @@ The reached performance and quality of a trained model with this implementation 
 *  tqdm==4.32.1
 *  Click==7.0
 *  sentencepiece==0.1.83
-*  tensorflow-gpu==2.0.0
+*  tensorflow-gpu==2.1.0
 *  numpy==1.16.4
 
 **Setup**
