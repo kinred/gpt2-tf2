@@ -27,8 +27,8 @@ The reached performance and quality of a trained model with this implementation 
 **Setup**
 
 ```
-$ git clone https://github.com/kinred/gpt-2-tensorflow2.0
-$ cd gpt-2-tensorflow2.0
+$ git clone https://github.com/kinred/gpt2-tf2
+$ cd gpt2-tf2
 $ pip install -r requirements.txt
 ```
 
