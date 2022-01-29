@@ -47,11 +47,11 @@ def parse_example(serialized_example):
     return inputs, targets
 
 
-def input_fn(tf_records, batch_size=32, padded_shapes=([-1], [-1]), epoch=10, buffer_size=10000):
+def input_fn(tf_records, batch_size=32, padded_shapes=([-1], [-1]), epoch=1, buffer_size=65536):
     if type(tf_records) is str:
         tf_records = [tf_records]
-    dataset = tf.data.TFRecordDataset(tf_records, buffer_size=10000)
-    dataset = dataset.shuffle(buffer_size=buffer_size)
+    dataset = tf.data.TFRecordDataset(tf_records, buffer_size=buffer_size)
+#    dataset = dataset.shuffle(buffer_size=buffer_size)
 
     dataset = dataset.map(parse_example)
     dataset = dataset.padded_batch(batch_size, padded_shapes=padded_shapes)
